@@ -1,4 +1,4 @@
-﻿Class MyEventLogEntry {
+Class MyEventLogEntry {
     
     [DateTime]$TimeCreated
     [Int32]$EventId
