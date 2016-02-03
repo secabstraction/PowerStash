@@ -6,24 +6,33 @@
 
         [Parameter()]
         [ValidateNotNullOrEmpty()]
+        [String]$Id,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
         [String]$Index,
 
         [Parameter()]
         [ValidateNotNullOrEmpty()]
-        [String]$Type,
-
-        [Parameter()]
-        [ValidateNotNullOrEmpty()]
-        [String]$Id
+        [String]$Type
     )
 
-    $ObjectType = $InputObject.GetType()
-    
-    $BulkIndexOperation = New-Object Nest.BulkIndexOperation[$ObjectType] -ArgumentList $InputObject 
-    
-    if ($PSBoundParameters.Index) { $BulkIndexOperation.Index = $Index }
-    if ($PSBoundParameters.Type) { $BulkIndexOperation.Type = $Type }
-    if ($PSBoundParameters.Id) { $BulkIndexOperation.Id = $Id }
+    if (!$PSBoundParameters.Id) { 
+        if ($InputObject.Id) { $Id = $InputObject.Id }
+        else { throw "No Id specified or found for object." }
+    }
 
-    Write-Output $BulkIndexOperation
+    $Properties = @{
+        index = @{
+            _index = $Index
+            _type = $Type
+            _id = $Id
+        }
+    }
+
+    $Index = New-Object psobject -Property $Properties | ConvertTo-Json -Compress
+    
+    $Json = $InputObject | ConvertTo-Json -Compress
+
+    Write-Output ($Index + "`n" + $Json + "`n")
 }
