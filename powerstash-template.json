@@ -1,0 +1,22 @@
+{
+    "template": "powerstash-*",
+    "mappings": {
+        "eventlogentry": {
+            "properties" : {
+                "Id": { "type": "string" },
+                "TimeCreated" : { "type" : "date" },
+                "DateCreated" : { "type" : "date" },
+                "EventId" : { "type" : "integer" },
+                "ComputerName" : { "type" : "string" },
+                "Level" : { "type" : "string" },
+                "Provider" : { "type" : "string" },
+                "LogName" : { "type" : "string" },
+                "Category" : { "type" : "string" },
+                "Type" : { "type" : "string" },
+                "InsertionStrings" : { "type" : "string" },
+                "Message" : { "type" : "string" },
+                "User" : { "type" : "string" }
+             }
+        }
+    }
+}
