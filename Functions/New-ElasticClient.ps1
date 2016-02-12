@@ -1,4 +1,4 @@
-﻿function New-ElasticClient {
+function New-ElasticClient {
     [CmdletBinding(DefaultParameterSetName = 'Node')]
     Param (
         [Parameter(ParameterSetName = 'Node', Position = 0)]
