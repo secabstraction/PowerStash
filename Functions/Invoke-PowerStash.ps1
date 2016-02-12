@@ -1,56 +1,85 @@
-﻿
-
-    
-
-    $RunspaceScript = { 
-        Param([String]$Computer, [String]$LogName)
-
-        try { $LogRecords = Get-WinEvent -ComputerName $Computer -LogName $LogName }
-        catch { Write-Warning ("{0}: {1}" -f $Computer,$_.Exception.Message) ; break }
+function Invoke-PowerStash {
+    [CmdLetBinding(DefaultParameterSetName = 'Node')]
+    param (        
+        [Parameter(ParameterSetName = 'Node', Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [Uri]
+        $Node = 'http://localhost:9200',
         
-        $MyLogRecords = $LogRecords | % { [MyEventLogRecord]::new($_) }
+        [Parameter(ParameterSetName = 'Configuration', Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [Elasticsearch.Net.Connection.ConnectionConfiguration]
+        $Configuration,
         
-        $BulkDescriptor = [Nest.BulkDescriptor]::new()
+        [Parameter(ParameterSetName = 'Client', Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [Elasticsearch.Net.ElasticsearchClient]
+        $Client,
 
-        foreach ($Record in $MyLogRecords) {  
-            $BulkDescriptor.Operations.Add(
-                (New-BulkIndexOperation $Record `
-                    -Index ("powerstash-$($Record.TimeCreated.ToShortDateString().Replace('/','-'))") `
-                    -Type ($Record.Provider + '-' + $Record.EventId)
-                )
-            )
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [Scriptblock]
+        $Scriptblock,
+        
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [Hashtable]
+        $Parameters = @{},
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [Int32]
+        $BulkSize = 200
+    )
+
+    $Stopwatch = [Diagnostics.Stopwatch]::StartNew()
+
+    $Elastic = switch ($PSCmdlet.ParameterSetName) { 
+        'Node'          { $Node }
+        'Configuration' { $Configuration }
+        default         { $Client }
+    }
+
+    $MessageData = [psobject]@{Size = $BulkSize; Elastic = $Elastic}
+
+    $OutputHandler = {
+        $PSObjects = $Sender.ReadAll()
+
+        if ($PSObjects.Count) { 
+            
+            Export-Elastic $PSObjects $Event.MessageData.Elastic -Size $Event.MessageData.Size | 
+            foreach { 
+                $_.Response.items.Value | where { $_.Values.status -ne 200 -and $_.Values.status -ne 201 } | 
+                foreach { Write-Warning ( -join $_.Values ) } 
+            }
         }
-        
-        $Client = [Nest.ElasticClient]::new()
-        $Client.Bulk($BulkDescriptor)
     }
 
-    Write-Verbose 'Creating runspace pool and session states.'
-    $SessionState = [Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-    $RunspacePool = [RunspaceFactory]::CreateRunspacePool(1, $ThrottleLimit, $SessionState, $Host)
-    $RunspacePool.Open()  
+    $BeginInvoke = [powershell].GetMethods() | where { $_.Name -eq 'BeginInvoke' -and $_.GetParameters().Count -eq 2 }
+    $GenericBeginInvoke = $BeginInvoke.MakeGenericMethod([psobject],[psobject])
 
-    $Runspaces = New-Object Collections.ArrayList
+    # Add scriptblock to new powershell runspace
+    $PowerShell = [PowerShell]::Create().AddScript($Scriptblock)
+    
+    # Add parameters to runspace
+    foreach ($Key in $Parameters.Keys) { [void]$PowerShell.AddParameter($Key, $Parameters[$Key]) }
 
-    $LogNames = Get-WinEvent -ComputerName $Computer -ListLog * | ? { $_.RecordCount -gt 0 } | % { $_.LogName }
+    # Create output collection and register event handler
+    $Output = [Management.Automation.PSDataCollection[psobject]]::new()
+    $OutputSubscriber = Register-ObjectEvent -InputObject $Output -EventName DataAdded -Action $OutputHandler -MessageData $MessageData
+    
+    # Run script          
+    $Result = $GenericBeginInvoke.Invoke($PowerShell, @($null,$Output))
+    
+    # Wait for script to complete
+    [void]$Result.AsyncWaitHandle.WaitOne()
+    
+    if ($PowerShell.Streams.Warning.Count) { $PowerShell.Streams.Warning | foreach { Write-Warning $_ } }
 
-    foreach ($LogName in $LogNames) {
-        
-        # Create the powershell instance and supply the script/params 
-        $PowerShell = [PowerShell]::Create()
-        [void]$PowerShell.AddScript($RunspaceScript)
-        [void]$PowerShell.AddArgument($Computer)
-        [void]$PowerShell.AddArgument($LogName)
-           
-        # Assign instance to runspacepool
-        $PowerShell.RunspacePool = $RunspacePool
-           
-        # Create an object for each runspace
-        $Job = "" | Select-Object Computer,PowerShell,Result
-        $Job.Computer = $Computer
-        $Job.PowerShell = $PowerShell
-        $Job.Result = $PowerShell.BeginInvoke()
-        
-        Write-Verbose ("Adding {0} to jobs." -f $Job.Computer)
-        [void]$Runspaces.Add($Job)
-    }
+    # Cleanup
+    $Stopwatch.Stop()
+    $PowerShell.Dispose()
+    Unregister-Event -SourceIdentifier $OutputSubscriber.Name
+    Write-Verbose $Stopwatch.Elapsed
+    [GC]::Collect()
+}
