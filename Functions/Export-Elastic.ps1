@@ -44,7 +44,7 @@ function Export-Elastic {
     }
     
     process {
-        if ($InputObject.Count -gt $RequestSize) { 
+        if ($InputObject.Count -gt $Size) { 
             
             $Collections = Split-Collection -Collection $InputObject -NewSize $Size 
             
