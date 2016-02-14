@@ -30,28 +30,21 @@
 
 .EXAMPLE
 
-    $Client = New-ElasticClient
+    $Pool = New-ConnectionPool
 
-    Creates a client configured to interact with a single node at http://localhost:9200
+    Creates a connection pool with a single node at http://localhost:9200.
 
 .EXAMPLE
 
-    $Client = New-ElasticClient -Node http://test:9200
+    $Pool = New-ConnectionPool -Sniffing
 
-    Creates a client configured to interact with a single node at http://test:9200
+    Creates a sniffing connection pool with a node at http://localhost:9200.
     
 .EXAMPLE
 
-    $Client = New-ElasticClient -Configuration $ConnectionConfiguration
+    $Pool = New-ConnectionPool -UriPool @('http://test1:9200','http://test2:9200','http://test3:9200') -Sniffing
 
-    Creates a client from an existing Elasticsearch.Net connection configuration.
-    This option should be used for more granular control of the client's confiuration.
-    
-.EXAMPLE
-
-    $Client = New-ElasticClient -Pool @('http://test1:9200','http://test2:9200','http://test3:9200') -Randomize
-    
-    Creates a client configured to connect to a sniffing-connection-pool of elastic instances, in a randomized fashion.
+    Creates a sniffing connection pool consisting of 3 nodes.
 
 .LINK
 
@@ -59,20 +52,24 @@
 #>
     [CmdletBinding(DefaultParameterSetName = 'Single')]
     param (
-        [Parameter(ParameterSetName = 'Single', Position = 0)]
+        [Parameter(Position = 0)]
         [ValidateNotNullOrEmpty()]
-        [Uri]
-        $SingleNode = 'http://localhost:9200',
+        [Uri[]]
+        $UriPool = 'http://localhost:9200',
 
-        [Parameter(ParameterSetName = 'Sniffing', Position = 0, Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [Uri[]]
-        $SniffingPool,
+        [Parameter(ParameterSetName = 'Single')]
+        [Switch]
+        $SingleNode,
         
-        [Parameter(ParameterSetName = 'Static', Position = 0, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Sniffing')]
         [ValidateNotNullOrEmpty()]
-        [Uri[]]
-        $StaticPool,
+        [Switch]
+        $Sniffing,
+
+        [Parameter(ParameterSetName = 'Static')]
+        [ValidateNotNullOrEmpty()]
+        [Switch]
+        $Static,
         
         [Parameter(ParameterSetName = 'Sniffing')]
         [Parameter(ParameterSetName = 'Static')]
@@ -88,15 +85,15 @@
 
     switch ($PSCmdlet.ParameterSetName) { 
         'Single' {
-            try { [Elasticsearch.Net.ConnectionPool.SingleNodeConnectionPool]::new($SingleNode) }
+            try { [Elasticsearch.Net.ConnectionPool.SingleNodeConnectionPool]::new($UriPool[0]) }
             catch { throw $_ }
         }
         'Sniffing' {
-            try { [Elasticsearch.Net.ConnectionPool.SniffingConnectionPool]::new($SniffingPool, $Randomize.IsPresent, $DateTimeProvider) }
+            try { [Elasticsearch.Net.ConnectionPool.SniffingConnectionPool]::new($UriPool, $Randomize.IsPresent, $DateTimeProvider) }
             catch { throw $_ }
         }
         'Static' {
-            try { [Elasticsearch.Net.ConnectionPool.StaticConnectionPool]::new($StaticPool, $Randomize.IsPresent, $DateTimeProvider) }
+            try { [Elasticsearch.Net.ConnectionPool.StaticConnectionPool]::new($UriPool, $Randomize.IsPresent, $DateTimeProvider) }
             catch { throw $_ }
         }
     }
