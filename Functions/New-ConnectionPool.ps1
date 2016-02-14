@@ -8,6 +8,10 @@
     Author: Jesse Davis (@secabstraction)
     Required Dependencies: Elasticsearch.Net
     
+.PARAMETER UriPool
+    
+    Specifies one or more uris to include in the connection pool.
+
 .PARAMETER SingleNode
 
     Specifies that the pool be created from a single uri.
