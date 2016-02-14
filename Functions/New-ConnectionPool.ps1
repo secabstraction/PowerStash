@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
 
-    Constructs a ConnectionPool for configuring an elastic client.
+    Constructs an Elasticsearch.Net ConnectionPool for configuring an elastic client.
     
     License: BSD 3-Clause
     Author: Jesse Davis (@secabstraction)
@@ -10,15 +10,15 @@
     
 .PARAMETER SingleNode
 
-    Specifies a single elastic uri for the client to interact with.
+    Specifies that the pool be created from a single uri.
 
-.PARAMETER SniffingPool
+.PARAMETER Sniffing
 
-    Specifies one or more elastic uris that make up a sniffing connection pool.
+    Specifies the pool as a sniffing connection pool.
 
-.PARAMETER StaticPool
+.PARAMETER Static
 
-    Specifies one or more elastic uris that make up a static connection pool. 
+    Specifies the pool as a static connection pool. 
 
 .PARAMETER Randomize
 
@@ -26,7 +26,7 @@
 
 .PARAMETER DateTimeProvider
 
-    Specifies an Elasticsearch.Net IDateTimeProvider to sniffing or static pools.
+    Specifies an Elasticsearch.Net IDateTimeProvider for sniffing or static pools.
 
 .EXAMPLE
 
