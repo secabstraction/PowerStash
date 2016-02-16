@@ -10,7 +10,7 @@ function New-ConnectionPool {
     Author: Jesse Davis (@secabstraction)
     Required Dependencies: Elasticsearch.Net
     
-.PARAMETER UriPool
+.PARAMETER Nodes
     
     Specifies one or more uris to include in the connection pool.
 
@@ -61,7 +61,7 @@ function New-ConnectionPool {
         [Parameter(Position = 0)]
         [ValidateNotNullOrEmpty()]
         [Uri[]]
-        $UriPool = 'http://localhost:9200',
+        $Nodes = 'http://localhost:9200',
 
         [Parameter(ParameterSetName = 'Single')]
         [Switch]
@@ -89,15 +89,15 @@ function New-ConnectionPool {
 
     switch ($PSCmdlet.ParameterSetName) { 
         'Single' {
-            try { [Elasticsearch.Net.ConnectionPool.SingleNodeConnectionPool]::new($UriPool[0]) }
+            try { [Elasticsearch.Net.ConnectionPool.SingleNodeConnectionPool]::new($Nodes[0]) }
             catch { throw $_ }
         }
         'Sniffing' {
-            try { [Elasticsearch.Net.ConnectionPool.SniffingConnectionPool]::new($UriPool, $Randomize.IsPresent, $DateTimeProvider) }
+            try { [Elasticsearch.Net.ConnectionPool.SniffingConnectionPool]::new($Nodes, $Randomize.IsPresent, $DateTimeProvider) }
             catch { throw $_ }
         }
         'Static' {
-            try { [Elasticsearch.Net.ConnectionPool.StaticConnectionPool]::new($UriPool, $Randomize.IsPresent, $DateTimeProvider) }
+            try { [Elasticsearch.Net.ConnectionPool.StaticConnectionPool]::new($Nodes, $Randomize.IsPresent, $DateTimeProvider) }
             catch { throw $_ }
         }
     }
