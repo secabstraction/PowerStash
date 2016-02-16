@@ -84,10 +84,9 @@ function Invoke-PowerStash {
     # Stupid hack, because $OutputSubscriber.Finished.WaitOne() blocks indefinitely
     do { Start-Sleep -Milliseconds 100 ; continue } until ($OutputSubscriber.State -ne 'Running')
     
-    if ($OutputSubscriber.Error.Count) { 
-        foreach ($Err in $OutputSubscriber.Error) { Write-Warning $Err.Exception.Message } 
-    }
-    if ($PowerShell.Streams.Warning.Count) { Write-Warning $PowerShell.Streams.Warning.Message }
+    if ($OutputSubscriber.Error.Count) { foreach ($Err in $OutputSubscriber.Error) { Write-Warning $Err.Exception.Message } }
+    if ($PowerShell.Streams.Error.Count) { foreach ($Err in $PowerShell.Streams.Error) { Write-Warning $Err.Exception.Message } }
+    if ($PowerShell.Streams.Warning.Count) { foreach ($Err in $PowerShell.Streams.Warning) { Write-Warning $Err.Message } }
 
     # Cleanup
     $Stopwatch.Stop()
