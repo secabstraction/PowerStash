@@ -1,4 +1,6 @@
-﻿function New-ConnectionConfiguration {
+﻿#requires -version 5
+
+function New-ConnectionConfiguration {
 <#
 .SYNOPSIS
 

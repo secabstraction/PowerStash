@@ -111,7 +111,10 @@ function Export-Elastic {
             default         { $Client }
         }
         
-        # Create a list we can add task objects to
+        # Test connection
+        try { $Client.CatHealth() } 
+        catch { throw $_ }
+
         $Tasks = [Collections.Generic.List[Threading.Tasks.Task]]::new()
     }
     
@@ -123,10 +126,10 @@ function Export-Elastic {
             
             foreach ($Collection in $Collections) {
                 
-                # Create a bulk request from collection 
+                # Create a bulk request
                 $BulkRequest = New-BulkIndexRequest -InputObject $Collection -Index $Index -Type $Type
                 
-                # Index request & add async task to list
+                # Add async index task to list
                 $Tasks.Add($Client.BulkAsync($BulkRequest)) 
             } 
         }
@@ -138,13 +141,9 @@ function Export-Elastic {
     }
 
     end {
-        # Wait for indexing operations to complete
         [Threading.Tasks.Task]::WaitAll($Tasks)
-
-        # Return results of index operations
         foreach ($Task in $Tasks) { Write-Output $Task.Result }
         
-        # Force garbage collection
         [GC]::Collect()
     }
 }

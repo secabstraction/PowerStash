@@ -1,4 +1,6 @@
-﻿function New-ConnectionPool {
+﻿#requires -version 5
+
+function New-ConnectionPool {
 <#
 .SYNOPSIS
 

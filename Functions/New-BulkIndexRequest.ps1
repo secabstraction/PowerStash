@@ -1,3 +1,5 @@
+#requires -version 5
+
 function New-BulkIndexRequest {
 <#
 .SYNOPSIS
@@ -74,7 +76,7 @@ function New-BulkIndexRequest {
         [String]$Type
     )
 
-    begin { $List = [Collections.Generic.List[String]]::new() }
+    begin { $JsonStrings = [Collections.Generic.List[String]]::new() }
     
     process { 
         foreach ($Object in $InputObject) { 
@@ -96,10 +98,10 @@ function New-BulkIndexRequest {
             $IndexMarker = $IndexProperties | ConvertTo-Json -Compress
             $Document = $Object | ConvertTo-Json -Compress
 
-            # Elastic bulkrequest format
-            $List.Add("$IndexMarker`n$Document`n") 
+            # Elastic bulk index format
+            $JsonStrings.Add("$IndexMarker`n$Document`n") 
         } 
     }
 
-    end { Write-Output (-join $List) }
+    end { Write-Output (-join $JsonStrings) }
 }

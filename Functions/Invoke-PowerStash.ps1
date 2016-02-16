@@ -1,3 +1,5 @@
+#requires -version 5
+
 function Invoke-PowerStash {
     [CmdLetBinding(DefaultParameterSetName = 'Node')]
     param (        
@@ -40,14 +42,19 @@ function Invoke-PowerStash {
         default         { $Client }
     }
 
-    $MessageData = [psobject]@{Size = $BulkSize; Elastic = $Elastic}
+    $MessageData = @{
+        Size = $BulkSize
+        Elastic = $Elastic
+    }
 
     $OutputHandler = {
         $PSObjects = $Sender.ReadAll()
-
+        
         if ($PSObjects.Count) { 
             
-            Export-Elastic $PSObjects $Event.MessageData.Elastic -Size $Event.MessageData.Size | 
+            Export-Elastic $PSObjects $Event.MessageData.Elastic -Size $Event.MessageData.Size |
+            
+            # Warn about failures
             foreach { 
                 $_.Response.items.Value | where { $_.Values.status -ne 200 -and $_.Values.status -ne 201 } | 
                 foreach { Write-Warning ( -join $_.Values ) } 
@@ -55,7 +62,7 @@ function Invoke-PowerStash {
         }
     }
 
-    $BeginInvoke = [powershell].GetMethods() | where { $_.Name -eq 'BeginInvoke' -and $_.GetParameters().Count -eq 2 }
+    $BeginInvoke = [powershell].GetMethods() | where { $_.Name -eq 'BeginInvoke' -and $_.IsGenericMethod -and $_.GetParameters().Count -eq 2 }
     $GenericBeginInvoke = $BeginInvoke.MakeGenericMethod([psobject],[psobject])
 
     # Add scriptblock to new powershell runspace
@@ -73,8 +80,11 @@ function Invoke-PowerStash {
     
     # Wait for script to complete
     [void]$Result.AsyncWaitHandle.WaitOne()
+
+    # Stupid hack, because $OutputSubscriber.Finished.WaitOne() blocks indefinitely
+    do { Start-Sleep -Milliseconds 100 ; continue } until ($OutputSubscriber.State -ne 'Running')
     
-    if ($PowerShell.Streams.Warning.Count) { $PowerShell.Streams.Warning | foreach { Write-Warning $_ } }
+    if ($OutputSubscriber.Error.Count) { $OutputSubscriber.Error | foreach { Write-Warning $_.Exception.Message } }
 
     # Cleanup
     $Stopwatch.Stop()
