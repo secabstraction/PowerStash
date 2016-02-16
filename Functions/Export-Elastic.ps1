@@ -61,7 +61,7 @@ function Export-Elastic {
 
     The objects in this example will be inserted into elastic at a rate of 500 objects per request.
     The elastic index will be inferred from each object's DateCreated property, as "powerstash-DateCreated".
-    The elastic type will be inferre from each object's primary typename. ($MyObject.PSObject.TypeName[0])
+    The elastic type will be inferred from each object's primary typename: $MyObject.PSObject.TypeName[0]
     
     e.g. http://localhost:9200/powerstash-2016-02-02/eventlogentry/localhost-3232
 
@@ -122,12 +122,12 @@ function Export-Elastic {
         if ($InputObject.Count -gt $Size) { 
             
             # Split large collections for better processing
-            $Collections = Split-Collection -Collection $InputObject -NewSize $Size 
+            Split-Collection -Collection $InputObject -NewSize $Size |
             
-            foreach ($Collection in $Collections) {
+            foreach {
                 
                 # Create a bulk request
-                $BulkRequest = New-BulkIndexRequest -InputObject $Collection -Index $Index -Type $Type
+                $BulkRequest = New-BulkIndexRequest -InputObject $_ -Index $Index -Type $Type
                 
                 # Add async index task to list
                 $Tasks.Add($Client.BulkAsync($BulkRequest)) 

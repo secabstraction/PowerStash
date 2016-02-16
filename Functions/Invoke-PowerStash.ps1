@@ -56,8 +56,8 @@ function Invoke-PowerStash {
             
             # Warn about failures
             foreach { 
-                $_.Response.items.Value | where { $_.Values.status -ne 200 -and $_.Values.status -ne 201 } | 
-                foreach { Write-Warning ( -join $_.Values ) } 
+                $Failures = $_.Response.items.Value | where { $_.Values.status -ne 200 -and $_.Values.status -ne 201 }
+                foreach ($Failure in $Failures) { Write-Warning ( -join $Failure.Values ) } 
             }
         }
     }
@@ -84,7 +84,10 @@ function Invoke-PowerStash {
     # Stupid hack, because $OutputSubscriber.Finished.WaitOne() blocks indefinitely
     do { Start-Sleep -Milliseconds 100 ; continue } until ($OutputSubscriber.State -ne 'Running')
     
-    if ($OutputSubscriber.Error.Count) { $OutputSubscriber.Error | foreach { Write-Warning $_.Exception.Message } }
+    if ($OutputSubscriber.Error.Count) { 
+        foreach ($Err in $OutputSubscriber.Error) { Write-Warning $Err.Exception.Message } 
+    }
+    if ($PowerShell.Streams.Warning.Count) { Write-Warning $PowerShell.Streams.Warning.Message }
 
     # Cleanup
     $Stopwatch.Stop()
