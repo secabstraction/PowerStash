@@ -68,12 +68,10 @@ function New-ConnectionPool {
         $SingleNode,
         
         [Parameter(ParameterSetName = 'Sniffing')]
-        [ValidateNotNullOrEmpty()]
         [Switch]
         $Sniffing,
 
         [Parameter(ParameterSetName = 'Static')]
-        [ValidateNotNullOrEmpty()]
         [Switch]
         $Static,
         
